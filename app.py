@@ -1,30 +1,25 @@
-
 import streamlit as st
-from PIL import Image
 import numpy as np
-import onnxruntime as ort
+from PIL import Image
+from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
 
-st.title("Image Classification using Deep Learning (Lightweight Model)")
+st.title("Image Classification using MobileNetV2")
 
-# Load ONNX model
-session = ort.InferenceSession("model.onnx")
-
-def preprocess(image):
-    image = image.resize((224, 224))
-    img = np.array(image).astype("float32") / 255.0
-    img = np.transpose(img, (2, 0, 1))
-    img = np.expand_dims(img, axis=0)
-    return img
+model = MobileNetV2(weights="imagenet")
 
 uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png"])
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).resize((224, 224))
     st.image(image, caption="Uploaded Image")
 
-    input_data = preprocess(image)
+    img = np.array(image)
+    img = preprocess_input(img)
+    img = np.expand_dims(img, axis=0)
 
-    outputs = session.run(None, {"input": input_data})
-    pred = np.argmax(outputs[0])
+    preds = model.predict(img)
+    results = decode_predictions(preds, top=3)[0]
 
-    st.subheader(f"Predicted Class Index: {pred}")
+    st.subheader("Predictions:")
+    for r in results:
+        st.write(f"{r[1]} : {round(r[2]*100,2)}%")
