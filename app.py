@@ -1,26 +1,21 @@
 
 import streamlit as st
-import tensorflow as tf
-import numpy as np
 from PIL import Image
+from transformers import pipeline
 
-st.title("Image Classification using MobileNetV2")
+st.title("Image Classification using Deep Learning")
 
-model = tf.keras.applications.MobileNetV2(weights='imagenet')
+# Load model (lightweight, auto-download)
+classifier = pipeline("image-classification")
 
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png"])
+uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png"])
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).resize((224, 224))
+    image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image")
 
-    img_array = np.array(image)
-    img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img_array)
-    img_array = np.expand_dims(img_array, axis=0)
+    result = classifier(image)
 
-    predictions = model.predict(img_array)
-    decoded = tf.keras.applications.mobilenet_v2.decode_predictions(predictions, top=3)[0]
-
-    st.subheader("Predictions")
-    for label in decoded:
-        st.write(label[1], ":", round(label[2]*100, 2), "%")
+    st.subheader("Predictions:")
+    for r in result[:3]:
+        st.write(f"{r['label']} : {round(r['score']*100, 2)}%")
