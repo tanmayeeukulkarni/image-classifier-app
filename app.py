@@ -1,21 +1,30 @@
 
 import streamlit as st
 from PIL import Image
-from transformers import pipeline
+import numpy as np
+import onnxruntime as ort
 
-st.title("Image Classification using Deep Learning")
+st.title("Image Classification using Deep Learning (Lightweight Model)")
 
-# Load model (lightweight, auto-download)
-classifier = pipeline("image-classification")
+# Load ONNX model
+session = ort.InferenceSession("model.onnx")
 
-uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png"])
+def preprocess(image):
+    image = image.resize((224, 224))
+    img = np.array(image).astype("float32") / 255.0
+    img = np.transpose(img, (2, 0, 1))
+    img = np.expand_dims(img, axis=0)
+    return img
+
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image")
 
-    result = classifier(image)
+    input_data = preprocess(image)
 
-    st.subheader("Predictions:")
-    for r in result[:3]:
-        st.write(f"{r['label']} : {round(r['score']*100, 2)}%")
+    outputs = session.run(None, {"input": input_data})
+    pred = np.argmax(outputs[0])
+
+    st.subheader(f"Predicted Class Index: {pred}")
